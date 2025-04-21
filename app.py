@@ -8,7 +8,7 @@ app = Flask(__name__)
 CORS(app)  # ✅ Add this line
 
 
-@app.route('/clean', methods=['POST'])
+@app.route('/process', methods=['POST']) 
 def clean_file():
     if 'file' not in request.files:
         return jsonify({"error": "No file provided"}), 400

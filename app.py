@@ -1,29 +1,36 @@
 from flask import Flask, request, jsonify
 import pandas as pd
-import re
+import io
+import os
 
 app = Flask(__name__)
 
-def clean_text(text):
-    text = re.sub(r'<.*?>', '', text)  # remove HTML
-    text = re.sub(r'[^ء-يa-zA-Z0-9\s]', '', text)  # keep Arabic, English, numbers
-    return text.strip()
-
 @app.route('/clean', methods=['POST'])
-def clean():
+def clean_file():
+    if 'file' not in request.files:
+        return jsonify({"error": "No file provided"}), 400
+
     file = request.files['file']
-    selected = request.form.getlist('options[]')
+    options = request.form.getlist('options[]')
+
     df = pd.read_csv(file)
 
-    if 'Deduplication' in selected:
-        df.drop_duplicates(subset='text', inplace=True)
+    if 'deduplication' in options:
+        df = df.drop_duplicates()
 
-    if 'HTML Cleaning' in selected or 'Noise Removal' in selected:
-        df['text'] = df['text'].apply(clean_text)
+    if 'normalization' in options:
+        df.columns = [col.strip().lower() for col in df.columns]
 
-    response = {
-        'rows': len(df),
-        'columns': list(df.columns)
-    }
+    if 'html-cleaning' in options:
+        df = df.applymap(lambda x: x.replace('<br>', ' ').replace('<div>', '') if isinstance(x, str) else x)
 
-    return jsonify(response)
+    # Add more processing steps...
+
+    return jsonify({
+        "rows": df.shape[0],
+        "columns": df.columns.tolist()
+    })
+
+if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port)

@@ -1,36 +1,47 @@
-from flask import Flask, request, jsonify, send_file
-from flask_cors import CORS
-import pandas as pd
 import io
+import pandas as pd
+from flask import Flask, request, send_file, jsonify
+from flask_cors import CORS
 
 app = Flask(__name__)
-CORS(app)  # allow all origins
+CORS(app)
 
 @app.route('/process', methods=['POST'])
 def process():
     try:
-        # Get file and options
         file = request.files['file']
         options = request.form.getlist('options[]')
+        output_format = request.form.get('format', 'csv')  # default to CSV
         df = pd.read_csv(file)
 
-        # Apply processing
-        if 'Deduplication' in options:
+        # Basic processing
+        if 'deduplication' in options:
             df.drop_duplicates(inplace=True)
-        if 'HTML Cleaning' in options:
-            df['text'] = df['text'].str.replace(r'<[^>]*>', '', regex=True)
-        if 'Noise Removal' in options:
-            df['text'] = df['text'].str.replace(r'[^؀-ۿ\s]', '', regex=True)
+        if 'html' in options:
+            df['text'] = df['text'].str.replace(r'<[^>]+>', '', regex=True)
+        if 'noise' in options:
+            df['text'] = df['text'].str.replace(r'[^\w\s]', '', regex=True)
 
-        # Save to buffer
+        # Prepare file for download
         output = io.StringIO()
-        df.to_csv(output, index=False)
-        output.seek(0)
+        filename = f'processed.{output_format}'
 
+        if output_format == 'json':
+            df.to_json(output, orient='records', force_ascii=False)
+            mimetype = 'application/json'
+        elif output_format == 'tsv':
+            df.to_csv(output, sep='\t', index=False)
+            mimetype = 'text/tab-separated-values'
+        else:  # default: CSV
+            df.to_csv(output, index=False)
+            mimetype = 'text/csv'
+
+        output.seek(0)
         return send_file(io.BytesIO(output.getvalue().encode()),
-                         mimetype='text/csv',
+                         mimetype=mimetype,
                          as_attachment=True,
-                         download_name='processed.csv')
+                         download_name=filename)
+
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

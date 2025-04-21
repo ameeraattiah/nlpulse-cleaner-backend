@@ -2,8 +2,11 @@ from flask import Flask, request, jsonify
 import pandas as pd
 import io
 import os
+from flask_cors import CORS  # ✅ Add this line
 
 app = Flask(__name__)
+CORS(app)  # ✅ Add this line
+
 
 @app.route('/clean', methods=['POST'])
 def clean_file():

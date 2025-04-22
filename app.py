@@ -10,9 +10,22 @@ CORS(app)
 def process():
     try:
         file = request.files['file']
+        filename = file.filename
+        ext = os.path.splitext(filename)[1].lower()
         options = request.form.getlist('options[]')
-        output_format = request.form.get('format', 'csv')  # default to CSV
-        df = pd.read_csv(file)
+        output_format = request.form.get('format', 'csv')
+
+        # Read different file types
+        if ext == '.csv':
+            df = pd.read_csv(file)
+        elif ext == '.tsv':
+            df = pd.read_csv(file, sep='\t')
+        elif ext == '.json':
+            df = pd.read_json(file)
+        elif ext == '.xlsx':
+            df = pd.read_excel(file)
+        else:
+            return jsonify({'error': f"Unsupported file type: {ext}"}), 400
 
         # Basic processing
         if 'deduplication' in options:

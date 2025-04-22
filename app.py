@@ -72,7 +72,14 @@ def process():
             output.seek(0)
             return send_file(output, as_attachment=True, download_name=out_name, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
         else:
-            df.to_csv(output, index=False)
+            output = io.BytesIO()
+            df.to_csv(output, index=False, encoding='utf-8-sig')  # utf-8-sig adds BOM
+            output.seek(0)
+            return send_file(output,
+                             mimetype='text/csv',
+                             as_attachment=True,
+                             download_name=out_name)
+
             mimetype = 'text/csv'
 
         output.seek(0)

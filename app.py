@@ -61,7 +61,7 @@ def process():
         out_name = f'processed.{output_format}'
 
         if output_format == 'json':
-            df.to_json(output, orient='records', force_ascii=False)
+            df.to_json(output, orient='records', force_ascii=False, lines=False)
             mimetype = 'application/json'
         elif output_format == 'tsv':
             df.to_csv(output, sep='\t', index=False)

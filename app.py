@@ -58,35 +58,31 @@ def process():
 
         # Prepare output
         output = io.StringIO()
-        out_name = f'processed.{output_format}'
-
+        filename = f'processed.{output_format}'
+        
         if output_format == 'json':
-            df.to_json(output, orient='records', force_ascii=False, lines=False)
+            df.to_json(output, orient='records', force_ascii=False)
             mimetype = 'application/json'
+            output_bytes = io.BytesIO(output.getvalue().encode('utf-8'))
         elif output_format == 'tsv':
             df.to_csv(output, sep='\t', index=False)
             mimetype = 'text/tab-separated-values'
+            output_bytes = io.BytesIO(output.getvalue().encode('utf-8'))
         elif output_format == 'xlsx':
-            output = io.BytesIO()
-            df.to_excel(output, index=False, engine='openpyxl')
-            output.seek(0)
-            return send_file(output, as_attachment=True, download_name=out_name, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-        else:
-            output = io.BytesIO()
-            df.to_csv(output, index=False, encoding='utf-8-sig')  # utf-8-sig adds BOM
-            output.seek(0)
-            return send_file(output,
-                             mimetype='text/csv',
-                             as_attachment=True,
-                             download_name=out_name)
-
+            output_bytes = io.BytesIO()
+            df.to_excel(output_bytes, index=False, engine='openpyxl')
+            output_bytes.seek(0)
+            mimetype = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        else:  # default: CSV
+            df.to_csv(output, index=False)
             mimetype = 'text/csv'
+            output_bytes = io.BytesIO(output.getvalue().encode('utf-8'))
+        
+        return send_file(output_bytes, mimetype=mimetype, as_attachment=True, download_name=filename)
+
 
         output.seek(0)
-        return send_file(io.BytesIO(output.getvalue().encode()),
-                         mimetype=mimetype,
-                         as_attachment=True,
-                         download_name=out_name)
+
 
     except Exception as e:
         traceback.print_exc()
